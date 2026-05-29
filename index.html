@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英语二 · 每日阅读</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/light.min.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+/* ===== reset & base ===== */
+:root {
+  --bg: #f8f7f4; --surface: #fff; --border: #e8e5df;
+  --text: #2c2825; --text2: #8a8580; --accent: #5b4fe5;
+  --accent-bg: #f0eeff; --green: #2d9d4e; --green-bg: #edfcf2;
+  --yellow: #ffe566; --green-hl: #7dffb3; --pink-hl: #ffb3ba;
+  --sidebar-w: 330px; --radius: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Inter", "SF Pro", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px;
+}
+
+/* ===== layout ===== */
+#sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w);
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; z-index: 100;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+#sidebar.hide { transform: translateX(calc(-1 * var(--sidebar-w))); }
+#main {
+  margin-left: var(--sidebar-w); min-height: 100vh;
+  transition: margin-left .3s cubic-bezier(.4,0,.2,1);
+}
+#main.full { margin-left: 0; }
+
+/* ===== sidebar header ===== */
+.sb-head {
+  padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+}
+.sb-head h1 { font-size: 16px; font-weight: 800; letter-spacing: -.3px; }
+.sb-head h1 span { color: var(--accent); }
+.sb-close {
+  position: absolute; right: 14px; top: 16px;
+  background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text2);
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sb-close:hover { background: #f0efec; }
+
+/* progress */
+.sb-prog { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.sb-prog-text { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.sb-prog-bar { height: 6px; background: #ece9e4; border-radius: 3px; overflow: hidden; }
+.sb-prog-fill { height: 100%; background: linear-gradient(90deg, var(--green), #6ee7a0); border-radius: 3px; transition: width .5s; }
+
+/* filters */
+.sb-filters { padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 5px; flex-wrap: wrap; }
+.ft {
+  padding: 4px 11px; border-radius: 14px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 11px; cursor: pointer;
+  transition: all .15s; font-weight: 500;
+}
+.ft:hover { border-color: var(--accent); color: var(--accent); }
+.ft.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* article list */
+#list { flex: 1; overflow-y: auto; padding: 6px 0; }
+#list::-webkit-scrollbar { width: 4px; }
+#list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+.it {
+  padding: 10px 20px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px;
+  border-left: 3px solid transparent; transition: all .12s;
+}
+.it:hover { background: #faf9f7; }
+.it.on { background: var(--accent-bg); border-left-color: var(--accent); }
+.it.dk { opacity: .5; }
+
+.ck {
+  width: 20px; height: 20px; border-radius: 6px; border: 2px solid #d4d0ca;
+  flex-shrink: 0; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; margin-top: 1px; background: var(--surface);
+}
+.ck:hover { border-color: var(--green); }
+.ck.on { background: var(--green); border-color: var(--green); color: #fff; }
+
+.it-info { flex: 1; min-width: 0; }
+.it-meta { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text2); }
+.it-type { font-size: 11px; }
+.it-title {
+  font-size: 12.5px; font-weight: 550; margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ===== toggle btn ===== */
+#tog {
+  position: fixed; top: 14px; left: 14px; z-index: 200;
+  width: 36px; height: 36px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; font-size: 18px; display: none;
+  align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+#sidebar.hide ~ #main #tog { display: flex; }
+
+/* ===== tabs ===== */
+.tabs {
+  display: flex; gap: 0; border-bottom: 2px solid var(--border);
+  margin-bottom: 28px; padding: 0 60px; background: var(--surface);
+  position: sticky; top: 0; z-index: 50;
+}
+.tab {
+  padding: 12px 24px; font-size: 14px; font-weight: 600;
+  cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: all .15s; color: var(--text2);
+}
+.tab:hover { color: var(--text); }
+.tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ===== welcome ===== */
+#welcome { padding: 80px 60px; text-align: center; }
+#welcome h2 { font-size: 28px; font-weight: 800; margin-bottom: 10px; }
+#welcome h2 span { color: var(--accent); }
+#welcome p { color: var(--text2); max-width: 420px; margin: 0 auto 24px; line-height: 1.9; }
+.welcome-bar { width: 280px; height: 10px; background: #ece9e4; border-radius: 5px; margin: 0 auto 10px; overflow: hidden; }
+.welcome-fill { height: 100%; background: linear-gradient(90deg, var(--green), #6ee7a0); border-radius: 5px; transition: width .5s; }
+.welcome-pct { font-size: 14px; color: var(--text2); }
+
+/* ===== article content ===== */
+#content { padding: 32px 60px 80px; max-width: 780px; display: none; }
+#content h1 { font-size: 26px; font-weight: 800; line-height: 1.35; margin-bottom: 8px; }
+#content h1 + blockquote { margin-top: 0; margin-bottom: 24px; }
+#content h2 {
+  font-size: 18px; font-weight: 700; margin: 36px 0 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+}
+#content h3 { font-size: 15px; font-weight: 700; margin: 22px 0 10px; }
+#content p {
+  line-height: 2; margin-bottom: 18px; font-size: 15.5px;
+  text-align: justify; hyphens: auto;
+}
+#content blockquote {
+  border-left: 4px solid var(--accent); padding: 14px 20px; margin: 16px 0;
+  background: var(--accent-bg); border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 13.5px; line-height: 1.8;
+}
+#content table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  margin: 18px 0; font-size: 13.5px;
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+#content th, #content td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+#content th { background: #f5f3f0; font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .3px; }
+#content tr:last-child td { border-bottom: none; }
+#content hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+#content ul, #content ol { padding-left: 24px; margin-bottom: 16px; }
+#content li { margin-bottom: 6px; line-height: 1.85; }
+#content strong { font-weight: 700; color: var(--accent); }
+#content details { margin: 14px 0; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; }
+#content summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 14px; }
+#content code { background: #f1eee8; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+
+/* ===== highlights ===== */
+::selection { background: var(--yellow); }
+.uh {
+  padding: 2px 1px; margin: 0 1px; border-radius: 3px;
+  cursor: pointer; transition: filter .1s;
+  display: inline;  /* key: inline so word boundaries are preserved */
+}
+.uh:hover { filter: brightness(0.88); }
+.uh-y { background: rgba(255,229,102,.35); border-bottom: 2px solid var(--yellow); }
+.uh-g { background: rgba(125,255,179,.3); border-bottom: 2px solid var(--green-hl); }
+.uh-p { background: rgba(255,179,186,.3); border-bottom: 2px solid var(--pink-hl); }
+
+/* highlight popup */
+#hlbar {
+  display: none; position: fixed; z-index: 500;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 6px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.12);
+  gap: 4px; align-items: center;
+}
+#hlbar button {
+  width: 30px; height: 30px; border: none; border-radius: 8px; cursor: pointer;
+  font-size: 13px; transition: transform .1s;
+}
+#hlbar button:hover { transform: scale(1.15); }
+.hb-y { background: var(--yellow); }
+.hb-g { background: var(--green-hl); }
+.hb-p { background: var(--pink-hl); }
+.hb-x { background: #ffe2e2; color: #dc2626; font-weight: 700; }
+
+/* ===== nav ===== */
+.nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 40px; padding-top: 20px; border-top: 2px solid var(--border);
+}
+.nb {
+  padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; font-size: 13px;
+  font-weight: 500; transition: all .15s;
+}
+.nb:hover { background: var(--accent-bg); border-color: var(--accent); }
+.nb:disabled { opacity: .3; cursor: default; }
+.nb.dk { font-weight: 700; }
+.nb.dk.id { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+.keys { font-size: 11px; color: var(--text2); margin-top: 10px; text-align: center; }
+kbd { background: #f1eee8; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-family: inherit; }
+
+/* ===== daily log ===== */
+#daily { padding: 32px 60px 80px; max-width: 780px; display: none; }
+#daily-editor {
+  width: 100%; min-height: 500px; padding: 20px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-family: "JetBrains Mono", "Fira Code", monospace; font-size: 14px;
+  line-height: 1.8; resize: vertical; background: var(--surface);
+  color: var(--text);
+}
+#daily-editor:focus { outline: none; border-color: var(--accent); }
+.daily-hint { font-size: 12px; color: var(--text2); margin-top: 8px; }
+
+/* ===== mobile ===== */
+@media (max-width: 768px) {
+  :root { --sidebar-w: 290px; }
+  #sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+  #sidebar.show { transform: translateX(0); }
+  #main { margin-left: 0 !important; }
+  #tog { display: flex !important; }
+  #content, #daily { padding: 20px 16px 60px; }
+  .tabs { padding: 0 16px; }
+  #welcome { padding: 60px 16px; }
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 90; }
+  #overlay.show { display: block; }
+}
+</style>
+</head>
+<body>
+
+<div id="overlay" onclick="togSB()"></div>
+
+<nav id="sidebar">
+  <div class="sb-head" style="position:relative">
+    <h1>📖 英语二 · <span>每日阅读</span></h1>
+    <button class="sb-close" onclick="togSB()">✕</button>
+  </div>
+  <div class="sb-prog" id="prog-area"></div>
+  <div class="sb-filters">
+    <button class="ft on" data-f="all">全部</button>
+    <button class="ft" data-f="undone">未完成</button>
+    <button class="ft" data-f="done">已完成</button>
+    <button class="ft" data-f="📰">📰</button>
+    <button class="ft" data-f="📖">📖</button>
+    <button class="ft" data-f="💻">💻</button>
+  </div>
+  <div id="list"></div>
+</nav>
+
+<div id="main">
+  <button id="tog" onclick="togSB()">☰</button>
+
+  <div class="tabs">
+    <div class="tab on" data-tab="read">📖 阅读</div>
+    <div class="tab" data-tab="daily">📝 每日记录</div>
+  </div>
+
+  <div id="welcome"></div>
+  <div id="content"></div>
+
+  <div id="daily">
+    <textarea id="daily-editor" placeholder="在这里写每日阅读记录..."></textarea>
+    <div class="daily-hint">自动保存 · 支持 Markdown 语法 · 用 **日期** 标记每天</div>
+  </div>
+</div>
+
+<div id="hlbar">
+  <button class="hb-y" onclick="hlDo('y')" title="黄色">🟡</button>
+  <button class="hb-g" onclick="hlDo('g')" title="绿色">🟢</button>
+  <button class="hb-p" onclick="hlDo('p')" title="粉色">🔴</button>
+  <button class="hb-x" onclick="hlDo('x')" title="移除">✕</button>
+</div>
+
+<script>
+let arts = [], cur = -1, filter = 'all', selR = null;
+let store = { done: {}, highlights: {}, notes: {} };
+
+// ─── API helpers ───
+async function api(path, opts) {
+  const r = await fetch('/api/' + path, opts);
+  return r.json();
+}
+
+// ─── Init ───
+async function init() {
+  const [a, d] = await Promise.all([api('articles'), api('data')]);
+  arts = a; store = d;
+  renderList(); updateStats();
+
+  // Daily log
+  const dl = await api('daily');
+  document.getElementById('daily-editor').value = dl.content || '';
+  let dailyTimer;
+  document.getElementById('daily-editor').addEventListener('input', e => {
+    clearTimeout(dailyTimer);
+    dailyTimer = setTimeout(() => api('daily', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ content: e.target.value })
+    }), 800);
+  });
+
+  showWelcome();
+}
+
+function showWelcome() {
+  const done = arts.filter(a => store.done[a.fn]).length;
+  const pct = arts.length ? Math.round(done / arts.length * 100) : 0;
+  document.getElementById('welcome').style.display = 'block';
+  document.getElementById('welcome').innerHTML = `
+    <h2>英语二 · <span>每日阅读</span></h2>
+    <p>5个月150篇，冲击英语二70分<br>选中文本后出现高亮按钮，或按 <kbd>H</kbd> 快捷高亮</p>
+    <div class="welcome-bar"><div class="welcome-fill" style="width:${pct}%"></div></div>
+    <div class="welcome-pct">${done} / ${arts.length} 篇已完成 (${pct}%)</div>
+  `;
+}
+
+// ─── Tabs ───
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    const tab = t.dataset.tab;
+    document.getElementById('welcome').style.display = tab === 'read' && cur < 0 ? 'block' : 'none';
+    document.getElementById('content').style.display = tab === 'read' && cur >= 0 ? 'block' : 'none';
+    document.getElementById('daily').style.display = tab === 'daily' ? 'block' : 'none';
+  });
+});
+
+// ─── List ───
+function renderList() {
+  const el = document.getElementById('list');
+  el.innerHTML = '';
+  arts.forEach((a, i) => {
+    const done = !!store.done[a.fn];
+    const tp = a.type;
+    if (filter === 'undone' && done) return;
+    if (filter === 'done' && !done) return;
+    if (['📰','📖','💻'].includes(filter) && tp !== filter) return;
+
+    const d = `${a.date.slice(4,6)}/${a.date.slice(6,8)}`;
+    let title = a.slug.replace(/-/g, ' ');
+    if (title.length > 36) title = title.slice(0, 34) + '…';
+
+    const div = document.createElement('div');
+    div.className = `it ${done?'dk':''} ${i===cur?'on':''}`;
+    div.innerHTML = `
+      <div class="ck ${done?'on':''}">${done?'✓':''}</div>
+      <div class="it-info">
+        <div class="it-meta"><span>${d}</span><span class="it-type">${tp}</span></div>
+        <div class="it-title">${title}</div>
+      </div>
+    `;
+    div.querySelector('.ck').addEventListener('click', e => { e.stopPropagation(); togDone(i); });
+    div.addEventListener('click', () => load(i));
+    el.appendChild(div);
+  });
+}
+
+// ─── Stats ───
+function updateStats() {
+  const done = arts.filter(a => store.done[a.fn]).length;
+  const pct = arts.length ? Math.round(done / arts.length * 100) : 0;
+  document.getElementById('prog-area').innerHTML = `
+    <div class="sb-prog-text">${done} / ${arts.length} 已完成 (${pct}%)</div>
+    <div class="sb-prog-bar"><div class="sb-prog-fill" style="width:${pct}%"></div></div>
+  `;
+}
+
+// ─── Load article ───
+async function load(i) {
+  if (i < 0 || i >= arts.length) return;
+  cur = i;
+  const a = arts[i];
+  const done = !!store.done[a.fn];
+
+  // switch to read tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === 'read'));
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+  document.getElementById('daily').style.display = 'none';
+
+  // active in list
+  document.querySelectorAll('.it').forEach((el, j) => el.classList.toggle('on', j === i));
+
+  try {
+    const r = await fetch('/docs/' + a.fn);
+    const md = await r.text();
+    const html = marked.parse(md);
+    const c = document.getElementById('content');
+    c.innerHTML = html;
+
+    c.insertAdjacentHTML('beforeend', `
+      <div class="nav">
+        <button class="nb" onclick="load(${i-1})" ${i===0?'disabled':''}>← 上一篇</button>
+        <button class="nb dk ${done?'id':''}" id="dbtn" onclick="togDone()">${done?'✅ 已完成':'☐ 标记完成'}</button>
+        <button class="nb" onclick="load(${i+1})" ${i===arts.length-1?'disabled':''}>下一篇 →</button>
+      </div>
+      <div class="keys"><kbd>←</kbd><kbd>→</kbd> 切换 &nbsp; <kbd>D</kbd> 完成 &nbsp; 选中文本 <kbd>H</kbd> 高亮</div>
+    `);
+    applyHL(a.fn);
+  } catch {
+    document.getElementById('content').innerHTML = '<p style="color:red">加载失败</p>';
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── Done ───
+async function togDone(i) {
+  if (i === undefined) i = cur;
+  if (i < 0) return;
+  const a = arts[i];
+  store.done[a.fn] = !store.done[a.fn];
+  await api('data', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(store) });
+  if (i === cur) load(i);
+  renderList();
+  updateStats();
+}
+
+// ─── Sidebar ───
+function togSB() {
+  const sb = document.getElementById('sidebar');
+  if (window.innerWidth <= 768) {
+    sb.classList.toggle('show');
+    document.getElementById('overlay').classList.toggle('show');
+  } else {
+    sb.classList.toggle('hide');
+    document.getElementById('main').classList.toggle('full');
+  }
+}
+
+// ─── Filters ───
+document.querySelectorAll('.ft').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.ft').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    filter = b.dataset.f;
+    renderList();
+  });
+});
+
+// ─── Highlights ───
+document.addEventListener('mouseup', e => {
+  const bar = document.getElementById('hlbar');
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+    setTimeout(() => bar.style.display = 'none', 150);
+    return;
+  }
+  const text = sel.toString().trim();
+  if (!text || text.length > 300) return;
+  try {
+    selR = sel.getRangeAt(0).cloneRange();
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    bar.style.display = 'flex';
+    bar.style.left = Math.max(8, rect.left + rect.width/2 - 70) + 'px';
+    bar.style.top = Math.max(8, rect.top - 44 + window.scrollY) + 'px';
+  } catch {}
+});
+
+async function hlDo(color) {
+  document.getElementById('hlbar').style.display = 'none';
+  if (!selR) return;
+  if (color === 'x') { window.getSelection().removeAllRanges(); return; }
+  const text = selR.toString().trim();
+  if (!text) return;
+  const fn = arts[cur].fn;
+  if (!store.highlights[fn]) store.highlights[fn] = [];
+  store.highlights[fn].push({ t: text, c: color });
+  await api('data', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(store) });
+  try {
+    const mark = document.createElement('span');
+    mark.className = `uh uh-${color}`;
+    mark.dataset.hl = text;
+    mark.addEventListener('click', () => hlRm(fn, text));
+    selR.surroundContents(mark);
+  } catch {}
+  window.getSelection().removeAllRanges();
+  selR = null;
+}
+
+function hlRm(fn, text) {
+  if (store.highlights[fn]) {
+    store.highlights[fn] = store.highlights[fn].filter(h => h.t !== text);
+    api('data', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(store) });
+  }
+  document.querySelectorAll(`[data-hl="${CSS.escape(text)}"]`).forEach(el => {
+    const parent = el.parentNode;
+    parent.replaceChild(document.createTextNode(el.textContent), el);
+    parent.normalize();
+  });
+}
+
+function applyHL(fn) {
+  const hls = store.highlights[fn] || [];
+  if (!hls.length) return;
+  const targets = document.querySelectorAll('#content p, #content li');
+  hls.forEach(hl => {
+    targets.forEach(p => {
+      if (!p.textContent.includes(hl.t)) return;
+      const r = findR(p, hl.t);
+      if (r) {
+        try {
+          const mark = document.createElement('span');
+          mark.className = `uh uh-${hl.c}`;
+          mark.dataset.hl = hl.t;
+          mark.addEventListener('click', () => hlRm(fn, hl.t));
+          r.surroundContents(mark);
+        } catch {}
+      }
+    });
+  });
+}
+
+function findR(el, text) {
+  const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let n;
+  while (n = w.nextNode()) {
+    const i = n.textContent.indexOf(text);
+    if (i !== -1) {
+      const r = document.createRange();
+      r.setStart(n, i); r.setEnd(n, i + text.length);
+      return r;
+    }
+  }
+  return null;
+}
+
+// ─── Keyboard ───
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowLeft' && cur > 0) load(cur - 1);
+  if (e.key === 'ArrowRight' && cur < arts.length - 1) load(cur + 1);
+  if ((e.key === 'd' || e.key === 'D') && cur >= 0) togDone();
+  if (e.key === 'h' || e.key === 'H') {
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed) hlDo('y');
+  }
+});
+
+init();
+</script>
+</body>
+</html>
