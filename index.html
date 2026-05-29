@@ -286,9 +286,12 @@ kbd { background: #f1eee8; border: 1px solid var(--border); border-radius: 4px; 
 let arts = [], cur = -1, filter = 'all', selR = null;
 let store = { done: {}, highlights: {}, notes: {} };
 
+// ─── Base path: auto-detect /en/ prefix for nginx proxy ───
+const BASE = window.location.pathname.startsWith('/en') ? '/en' : '';
+
 // ─── API helpers ───
 async function api(path, opts) {
-  const r = await fetch('/api/' + path, opts);
+  const r = await fetch(BASE + '/api/' + path, opts);
   return r.json();
 }
 
@@ -394,7 +397,7 @@ async function load(i) {
   document.querySelectorAll('.it').forEach((el, j) => el.classList.toggle('on', j === i));
 
   try {
-    const r = await fetch('/docs/' + a.fn);
+    const r = await fetch(BASE + '/docs/' + a.fn);
     const md = await r.text();
     const html = marked.parse(md);
     const c = document.getElementById('content');
