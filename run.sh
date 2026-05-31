@@ -8,7 +8,7 @@ APP_SCRIPT="app.py"
 PID_FILE="./${APP_NAME}.pid"
 LOG_FILE="./logs/${APP_NAME}.log"
 HOST="0.0.0.0"
-PORT=8080
+PORT=25000
 
 # 确保日志目录存在
 mkdir -p logs
